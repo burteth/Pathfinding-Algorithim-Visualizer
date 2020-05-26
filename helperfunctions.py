@@ -12,12 +12,14 @@ def getMouseNode(nodes):
 
     return(clicked_sprites)
 
-def getGradColor(color,n):
-    upper = ROOT_NUM_BOXES**2
+def getstateColor(color,n):
+    upper = STATE_UPPER
     if (n > upper):
         factor = upper
+    elif (n == 0):
+        return(HIGHLIGHT)
     elif (n < 0):
-        factor = 0
+        return(WHITE)
     else:
         factor = n
     newColor = []

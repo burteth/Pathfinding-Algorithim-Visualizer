@@ -17,12 +17,9 @@ map = Map()
 running = True
 drag = False
 
+currentAlgo = None
 
-"""queue = [self.start]
-count = 0
-
-visited = set()"""
-
+map.update(screen)
 # Main loop
 while running:
 
@@ -38,8 +35,25 @@ while running:
                 map.clearEverything()
                 #map.removeWalls()
 
-            elif event.key == K_h:
-                map.bfs(screen)
+            elif event.key == K_1:
+                currentAlgo = "bfs"
+                map.state = "active"
+                queue = []
+
+            elif event.key == K_2:
+                currentAlgo = "bidirectionBfs"
+                map.state = "active"
+                queue1 = []
+                queue2 = []
+
+            elif event.key == K_3:
+                currentAlgo = "dfs"
+                map.state = "active"
+                stack = []
+
+
+            elif event.key == K_r:
+                map.setRandomPattern()
 
 
         elif event.type == QUIT:
@@ -81,7 +95,42 @@ while running:
                      sprite.clicked()
                      pastNodes.append(sprite)
 
+    if ( currentAlgo == "bfs" ):
 
+        if map.state == "active":
+            queue = map.bfs(queue)
+            map.updateStates()
+
+        elif (map.state == "inactive") and (not map.drawingPath):
+            currentAlgo = None
+
+        if (map.state == "finish sequence") or (map.drawingPath):
+            map.updateStates()
+            map.drawPath()
+
+    elif (currentAlgo == "bidirectionBfs"):
+        if map.state == "active":
+            queue1, queue2 = map.bidirectionBfs(queue1, queue2)
+            map.updateStates()
+
+        elif (map.state == "inactive") and (not map.drawingPath):
+            currentAlgo = None
+
+        if (map.state == "finish sequence") or (map.drawingPath):
+            map.updateStates()
+            map.drawPath("bidirectionBfs")
+
+    elif (currentAlgo == "dfs"):
+        if map.state == "active":
+            stack = map.dfs(stack)
+            map.updateStates()
+
+        elif (map.state == "inactive") and (not map.drawingPath):
+            currentAlgo = None
+
+        if (map.state == "finish sequence") or (map.drawingPath):
+            map.updateStates()
+            map.drawPath()
 
 
     map.update(screen)
