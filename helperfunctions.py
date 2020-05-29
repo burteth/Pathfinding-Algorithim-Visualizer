@@ -27,3 +27,13 @@ def getstateColor(color,n):
         newColor.append(int(num*(1 - factor/upper)))
 
     return(tuple(newColor))
+
+def calcDist(goalX, goalY, curX, curY):
+
+    difX = abs(goalX - curX)
+    difY = abs(goalY - curY)
+
+    pyth = min(difX, difY)
+    straight = max(difX, difY) - pyth
+
+    return((pyth * 1.414214) + straight)

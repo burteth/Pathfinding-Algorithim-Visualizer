@@ -33,6 +33,8 @@ class Map(object):
 
                 xPos = xStart*boxWidth + (boxWidth / 2)
                 newNode = Node((xPos, yPos))
+                newNode.row = yStart
+                newNode.col = xStart
                 newNode.stateColors = self.stateColors
                 nodeList[-1].append(newNode)
 
@@ -63,9 +65,7 @@ class Map(object):
             randomNum = random.randint(0,len(nodes) - 1)
             if (nodes[randomNum].active):
                 nodes[randomNum].clicked()
-                count -=1
-
-
+            count -=1
 
     def removeWalls(self):
         for node in self.nodes:
@@ -86,8 +86,7 @@ class Map(object):
 
     def update(self, screen):
 
-
-        screen.fill((255, 255, 255))
+        #screen.fill((255, 255, 255))
 
         for curNode in self.nodes:
             screen.blit(curNode.surf, curNode.rect)
@@ -98,6 +97,7 @@ class Map(object):
             pygame.draw.line(screen, (0,0,0), (0, i*boxHeight), (SCREEN_WIDTH, i*boxHeight), 1)
 
         pygame.display.flip()
+
 
     def updateStates(self):
 
@@ -130,6 +130,18 @@ class Map(object):
         self.start.state = -2
         #self.end.active = False
 
+    def reset(self):
+        self.visited = set()
+        self.state = "finish sequence"
+
+    def drawPath(self):
+        print(self.pathlist)
+
+        if self.pathlist[-1] == self.start:
+            self.drawingPath = False
+            return()
+        else:
+            self.pathlist.pop().surf.fill(PATH_HIGHLIGHT)
 
     def bfs(self, queue):
 
@@ -152,12 +164,11 @@ class Map(object):
             #Initiate Ending Sequence
             if item == self.end:
                 self.drawingPath = True
-                self.nextPath = self.end.last
 
-                curNode = self.end
-                while (curNode != self.start):
-                    curNode = curNode.last
-                    curNode.state = -2
+
+                for node in self.end.path:
+                    node.state = -2
+                self.pathlist = self.end.path
 
                 self.reset()
                 return([])
@@ -168,11 +179,12 @@ class Map(object):
                     if adjacent.active :
 
                         #update the path list for the adjacent nodes
-                        #adjacent.path = item.path + [item]
 
-                        adjacent.last = item
+                        adjacent.path = item.path + [item]
+
                         if adjacent.state == -1:
                             adjacent.state = STATE_UPPER
+
                         queue.insert(0, adjacent)
                         i += 1
                         j += 1
@@ -181,54 +193,51 @@ class Map(object):
         return(queue)
 
     def dfs(self, stack):
+        #Check if the bounds are valid
+        if (self.start == None) or (self.end == None) or (self.end == self.start):
+            self.reset()
+            return([])
 
-            #Check if the bounds are valid
-            if (self.start == None) or (self.end == None) or (self.end == self.start):
-                self.reset()
-                return([])
+        #if it is the first iteration
+        if len(stack) == 0:
+            stack = [self.start]
+            self.visited.add(self.start.id)
 
-            #if it is the first iteration
-            if len(stack) == 0:
-                stack = [self.start]
-                self.visited.add(self.start.id)
+        item = stack[-1]
 
-            item = stack[-1]
+        #Initiate Ending Sequence
+        if item == self.end:
+            self.drawingPath = True
+            for node in self.end.path:
+                node.state = -2
 
-            #Initiate Ending Sequence
-            if item == self.end:
-                self.drawingPath = True
-                self.nextPath = self.end.last
+            self.pathlist = self.end.path
 
-                curNode = self.end
-                while (curNode != self.start):
-                    curNode = curNode.last
-                    curNode.state = -2
+            self.reset()
+            return([])
 
-                self.reset()
-                return([])
+        visitAny = False
+        for adjacent in item.adj:
+            if (adjacent != 0) and (adjacent.id not in self.visited):
+                if adjacent.active:
 
-            visitAny = False
-            for adjacent in item.adj:
-                if (adjacent != 0) and (adjacent.id not in self.visited):
-                    if adjacent.active:
+                    visitAny = True
 
-                        visitAny = True
+                    adjacent.path = item.path + [item]
 
-                        adjacent.last = item
-                        if adjacent.state == -1:
-                            adjacent.state = STATE_UPPER
+                    if adjacent.state == -1:
+                        adjacent.state = STATE_UPPER
 
-                        stack.append(adjacent)
-                        self.visited.add(adjacent.id)
-                        break
+                    stack.append(adjacent)
                     self.visited.add(adjacent.id)
+                    break
+                self.visited.add(adjacent.id)
 
 
-            if not visitAny:
-                stack.pop()
+        if not visitAny:
+            stack.pop()
 
-            return(stack)
-
+        return(stack)
 
     def bidirectionBfs(self, queue1, queue2):
 
@@ -247,8 +256,6 @@ class Map(object):
             self.visited1.add(self.start.id)
             self.visited2.add(self.end.id)
 
-            self.last1 = None
-            self.last2 = None
 
 
         #Next Layer for queue1
@@ -266,7 +273,7 @@ class Map(object):
                     if adjacent.active:
                         if adjacent.id in self.visited2:
 
-                            self.pathlist = adjacent.path + [adjacent, item] + item.path[::-1]
+                            self.pathlist = item.path + [item, adjacent] +  adjacent.path[::-1]
 
                             self.drawingPath = True
 
@@ -302,14 +309,15 @@ class Map(object):
                     if adjacent.active:
                         if adjacent.id in self.visited1:
 
-                            self.pathlist =  adjacent.path + [adjacent, item] + item.path[::-1]
+                            self.pathlist = adjacent.path + [adjacent, item] + item.path[::-1]
+
+                            self.drawingPath = True
 
                             for node in self.pathlist:
                                 node.state = -2
 
                             self.reset()
                             return([],[])
-
 
                         adjacent.path = item.path + [item]
                         if adjacent.state == -1:
@@ -322,27 +330,86 @@ class Map(object):
 
         return(queue1, queue2)
 
+    def aStarSetup(self):
+
+        startX = self.start.col
+        startY = self.start.row
+
+        endX = self.end.col
+        endY = self.end.row
+
+        for node in self.nodes:
+            node.g = calcDist(startX, startY, node.col, node.row)
+            node.h = calcDist(endX, endY, node.col, node.row)
+            node.cost = int((node.g + node.h) * 10)
 
 
-    def reset(self):
-        self.visited = set()
-        self.state = "finish sequence"
+    def aStar(self, queue):
 
-    def drawPath(self, option = None):
+        if (self.start == None) or (self.end == None) or (self.end == self.start):
+            self.reset()
+            return([])
 
-        if option == "bidirectionBfs":
-            if len(self.pathlist) == 0:
-                self.drawingPath = False
-            else:
-                nextNode = self.pathlist.pop()
-                nextNode.surf.fill(PATH_HIGHLIGHT)
-            return()
+        if len(queue) == 0:
+            queue = [self.start]
+            self.visited.add(self.start.id)
 
-        if self.nextPath == self.start:
-            self.drawingPath = False
-            return()
-        self.nextPath.surf.fill(PATH_HIGHLIGHT)
-        self.nextPath = self.nextPath.last
+        item = queue.pop()
+
+        if item == self.end:
+
+            self.drawingPath = True
+            for node in self.end.path:
+                node.state = -2
+
+            self.pathlist = self.end.path
+
+            self.reset()
+            return([])
+
+        if item.state == -1:
+            item.state = STATE_UPPER
+
+
+        for adjacent in item.adj:
+            if (adjacent != 0) and (adjacent.id not in self.visited):
+
+                if adjacent.active :
+
+                    #update the path list for the adjacent nodes
+                    adjacent.path = item.path + [item]
+
+
+                    inserted = False
+
+                    for queueIndex in range(len(queue)):
+                        queueNode = queue[queueIndex]
+                        if (queueNode.cost == adjacent.cost) and (queueNode.h < adjacent.h):
+                            queue.insert(queueIndex + 1, adjacent)
+                            inserted = True
+                            break
+                        elif (queueNode.cost < adjacent.cost):
+                            queue.insert(queueIndex, adjacent)
+                            inserted = True
+                            break
+
+                    if not inserted:
+                        queue.insert(len(queue),adjacent)
+
+                self.visited.add(adjacent.id)
+
+
+
+
+
+        return(queue)
+
+
+
+
+
+
+
 
 
 
@@ -352,12 +419,15 @@ class Node(pygame.sprite.Sprite):
         super(Node, self).__init__()
 
         #Pygame Sprite Things
-        self.surf = pygame.Surface((boxWidth, boxHeight))
+        self.surf = pygame.Surface((boxWidth, boxHeight - BORDER))
         self.surf.fill(WHITE)
         self.rect = self.surf.get_rect(center=pos)
 
         #Position of the Node
         self.pos = pos
+
+        self.row = None
+        self.col = None
 
         #is the node a wall
         self.active = True
@@ -381,13 +451,14 @@ class Node(pygame.sprite.Sprite):
         #List of nodes that were visited along
         #the path to get to this node
         self.path = []
-        self.last = 0
+
+        self.cost = None
+        self.g = None
+        self.h = None
+
 
         for constraint in self.checkEdges():
             self.adj[constraint] = 0
-
-
-
 
     def clicked(self):
 

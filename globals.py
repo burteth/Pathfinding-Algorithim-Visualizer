@@ -34,8 +34,13 @@ from pygame.locals import (
 SCREEN_WIDTH = 1500
 SCREEN_HEIGHT = 900
 
-ROOT_NUM_BOXES = 150
-BORDER = 3
+small = 25
+med = 120
+large = 160
+
+
+ROOT_NUM_BOXES = med
+BORDER = 0
 
 boxWidth = SCREEN_WIDTH / ROOT_NUM_BOXES
 boxHeight = SCREEN_HEIGHT / ROOT_NUM_BOXES

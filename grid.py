@@ -11,6 +11,7 @@ pygame.init()
 
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 
+
 map = Map()
 
 
@@ -19,7 +20,15 @@ drag = False
 
 currentAlgo = None
 
+
 map.update(screen)
+
+screen.fill((255, 255, 255))
+
+for i in range(ROOT_NUM_BOXES):
+    pygame.draw.line(screen, (0,0,0), (i*boxWidth, 0), (i*boxWidth, SCREEN_HEIGHT), 1)
+    pygame.draw.line(screen, (0,0,0), (0, i*boxHeight), (SCREEN_WIDTH, i*boxHeight), 1)
+    
 # Main loop
 while running:
 
@@ -50,6 +59,12 @@ while running:
                 currentAlgo = "dfs"
                 map.state = "active"
                 stack = []
+
+            elif event.key == K_4:
+                currentAlgo = "A*"
+                map.state = "active"
+                map.aStarSetup()
+                queue = []
 
 
             elif event.key == K_r:
@@ -118,11 +133,23 @@ while running:
 
         if (map.state == "finish sequence") or (map.drawingPath):
             map.updateStates()
-            map.drawPath("bidirectionBfs")
+            map.drawPath()
 
     elif (currentAlgo == "dfs"):
         if map.state == "active":
             stack = map.dfs(stack)
+            map.updateStates()
+
+        elif (map.state == "inactive") and (not map.drawingPath):
+            currentAlgo = None
+
+        if (map.state == "finish sequence") or (map.drawingPath):
+            map.updateStates()
+            map.drawPath()
+
+    elif (currentAlgo == "A*"):
+        if map.state == "active":
+            queue = map.aStar(queue)
             map.updateStates()
 
         elif (map.state == "inactive") and (not map.drawingPath):
