@@ -72,11 +72,26 @@ while running:
                 aTie = lambda a : a.h
                 priorityQueue = MinHeap(func = aFunc, tie = aTie)
 
+            elif event.key == K_5:
+                currentAlgo = "dijkstras"
+                map.state = "active"
+
+                aFunc = lambda a : a.cost
+                priorityQueue = MinHeap(func = aFunc)
+
+            elif event.key == K_6:
+                currentAlgo = "A*"
+                map.state = "active"
+                map.greedyBFSSetup()
+
+                aFunc = lambda a : a.cost
+                priorityQueue = MinHeap(func = aFunc)
+
             elif event.key == K_r:
                 map.setRandomPattern()
 
             elif event.key == K_b:
-                if thickness == 1:
+                if thickness == 2:
                     thickness = 0
                 else:
                     thickness += 1
@@ -160,6 +175,19 @@ while running:
     elif (currentAlgo == "A*"):
         if map.state == "active":
             priorityQueue = map.aStar(priorityQueue)
+            map.updateStates()
+
+        elif (map.state == "inactive") and (not map.drawingPath):
+            currentAlgo = None
+
+        if (map.state == "finish sequence") or (map.drawingPath):
+            map.updateStates()
+            map.drawPath()
+
+    elif (currentAlgo == "dijkstras"):
+
+        if map.state == "active":
+            priorityQueue = map.dijkstras(priorityQueue)
             map.updateStates()
 
         elif (map.state == "inactive") and (not map.drawingPath):

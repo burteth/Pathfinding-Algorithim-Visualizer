@@ -10,15 +10,17 @@ PATH_HIGHLIGHT = (252, 252, 3)
 
 
 from pygame.locals import (
-    K_1,
-    K_2,
-    K_3,
-    K_4,
-    K_b,
-    K_r,
+    K_1, #bfs
+    K_2, #bidirectionBfs
+    K_3, #dfs
+    K_4, #A*
+    K_5, #dijkstras
+    K_6, #Greedy Best First Search
+    K_b, #Change thickness of cursor for walls
+    K_r, #Generate Random Walls
     K_j,
     K_h,
-    K_c,
+    K_c, #Clear Everything
     K_w,
     K_a,
     K_s,
@@ -50,4 +52,4 @@ boxHyp = int(math.sqrt(SCREEN_WIDTH**2 + SCREEN_HEIGHT**2))
 
 STATE_UPPER = 10
 
-ONLY_ADJCENT = False
+ONLY_ADJCENT = True

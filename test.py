@@ -511,24 +511,39 @@ class Node(pygame.sprite.Sprite):
         self.surf.fill(self.stateColors[self.state])
 
 
+
 class MinHeap(object):
 
-    def __init__(self, attributeFunc):
+    def __init__(self, func = None, tie = None):
 
-        self.attFunc = self.setAttFunc(attributeFunc)
-
+        #Initial MaxSize of heap
         self.maxsize = 15
 
-        self.Heap = [0]*(15 + 1)
-        self.Heap[0] = 0
+        #Create the heap array
+        self.Heap = [-1]*(self.maxsize + 1)
+
+        #Set unused first value
+        self.Heap[0] = - 1
 
         self.FRONT = 1
         self.size = 0
 
+
+        #set tiebreaker and attribute functions
+        if tie != None:
+            self.tie = self.setAttFunc(tie)
+        else:
+            self.tie = None
+
+        if func != None:
+            self.attFunc = self.setAttFunc(func)
+        else:
+            self.attFunc = lambda a : a
+
     def setAttFunc(self, attributeFunc):
         def newFunc(node):
-            if (node == 0):
-                return(0)
+            if (node == -1) or (node == 0):
+                return(-1)
             else:
                 return(attributeFunc(node))
         return(newFunc)
@@ -554,9 +569,12 @@ class MinHeap(object):
     def minHeapify(self, pos):
 
         if not self.isLeaf(pos):
-            if (self.attFunc(self.Heap[pos]) > self.attFunc(self.Heap[self.leftChild(pos)])) or (self.attFunc(self.Heap[pos]) > self.attFunc(self.Heap[self.rightChild(pos)])):
 
-                if (self.attFunc(self.Heap[self.leftChild(pos)]) < self.attFunc(self.Heap[self.rightChild(pos)])):
+            if (self.isGreaterThan( pos, self.leftChild(pos) )) or (self.isGreaterThan( pos, self.rightChild(pos) )):
+            #if (self.attFunc(self.Heap[pos]) > self.attFunc(self.Heap[self.leftChild(pos)])) or (self.attFunc(self.Heap[pos]) > self.attFunc(self.Heap[self.rightChild(pos)])):
+
+                #if (self.attFunc(self.Heap[self.leftChild(pos)]) < self.attFunc(self.Heap[self.rightChild(pos)])):
+                if ( self.isGreaterThan( self.rightChild(pos) , self.leftChild(pos) ) ):
                     self.swap(pos, self.leftChild(pos))
                     self.minHeapify(self.leftChild(pos))
                 else:
@@ -572,14 +590,14 @@ class MinHeap(object):
 
         current = self.size
 
-        while (self.attFunc(self.Heap[current]) < self.attFunc(self.Heap[self.parent(current)])):
+        while (self.isGreaterThan(self.parent(current), current)):
 
             self.swap(current, self.parent(current))
             current = self.parent(current)
 
     def resize(self):
         for i in range(self.maxsize + 1):
-            self.Heap.append(0)
+            self.Heap.append(-1)
         self.maxsize += self.maxsize + 1
 
     def heap_disp(self):
@@ -622,11 +640,34 @@ class MinHeap(object):
 
         popped = self.Heap[self.FRONT]
         self.Heap[self.FRONT] = self.Heap[self.size]
-        self.Heap[self.size] = 0
+        self.Heap[self.size] = -1
         self.size -= 1
         self.minHeapify(self.FRONT)
 
         return(popped)
+
+    def isGreaterThan(self, first, second):
+        """ Compares two positions within the heap based
+            on the attribute function and the tiebreaker
+            function
+        """
+        firstVal = self.attFunc(self.Heap[first])
+        secondVal = self.attFunc(self.Heap[second])
+
+        if firstVal == secondVal:
+            if self.tie != None:
+                firstTie = self.tie(self.Heap[first])
+                secondTie = self.tie(self.Heap[second])
+                if firstTie > secondTie:
+                    return(True)
+                return(False)
+        else:
+            if firstVal > secondVal:
+                return(True)
+            return(False)
+
+    def __len__(self):
+        return(self.size)
 
 class NodeTest(object):
 
@@ -649,7 +690,7 @@ if __name__ == "__main__":
         values.append(num)
         minHeap.insert(NodeTest(num))
 
-    minHeap.minHeap()
+    #minHeap.minHeap()
     minHeap.heap_disp()
 
     for i in range(10):

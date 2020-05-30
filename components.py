@@ -51,8 +51,15 @@ class Map(object):
 
                 curNode = nodeList[row][col]
                 for direction in range(len(dir)):
+
+                    #Update unconstrained adjacency list
+                    if (curNode.realAdj[direction] == None):
+                        curNode.realAdj[direction] = nodeList[row + dir[direction][1]][col + dir[direction][0]]
+
+                    #Update constrained adjacency list
                     if (curNode.adj[direction] == None):
                         curNode.adj[direction] = nodeList[row + dir[direction][1]][col + dir[direction][0]]
+
                     #add the nodes to the group
                     self.nodes.add(nodeList[row][col])
 
@@ -111,6 +118,8 @@ class Map(object):
             if (curNode.active == True) and (curNode.state > 0):
                 visited = True
                 curNode.updateState()
+                curNode.touched = True
+
 
         if (not visited) and (self.state == "finish sequence"):
             self.state = "inactive"
@@ -142,6 +151,9 @@ class Map(object):
         self.state = "finish sequence"
 
     def drawPath(self):
+
+        for node in self.pathlist:
+            node.touched = True
 
         if self.pathlist[-1] == self.start:
             self.drawingPath = False
@@ -360,12 +372,16 @@ class Map(object):
             self.reset()
             return([])
 
+        #if first iteration
         if priorityQueue.size == 0:
             priorityQueue.insert(self.start)
             self.visited.add(self.start.id)
 
+        #print( [ node.cost for node in priorityQueue.Heap if node != -1 ] )
+
         item = priorityQueue.remove()
 
+        #Initiate Ending Sequence
         if item == self.end:
 
             self.drawingPath = True
@@ -383,18 +399,86 @@ class Map(object):
 
 
         for adjacent in item.adj:
-            if (adjacent != 0) and (adjacent.id not in self.visited):
+            if (adjacent != 0):
+                if adjacent.active:
+                    if (adjacent.id not in self.visited):
+                        #update the path list for the adjacent nodes
+                        adjacent.path = item.path + [item]
 
-                if adjacent.active :
-
-                    #update the path list for the adjacent nodes
-                    adjacent.path = item.path + [item]
-
-                    priorityQueue.insert(adjacent)
-
-                self.visited.add(adjacent.id)
-
+                        priorityQueue.insert(adjacent)
+                        self.visited.add(adjacent.id)
+                    else:
+                        if ( len( adjacent.path ) > len( item.path ) + 1 ):
+                            adjacent.path = item.path + [item]
+                            #self.visited.remove(adjacent.id)
+                            newQueue = [adjacent]
+                            while ( newQueue ):
+                                node = newQueue.pop()
+                                for neighbor in node.adj:
+                                    if (neighbor != 0) and (neighbor.active):
+                                        if ( len( neighbor.path ) > len( node.path ) + 1 ):
+                                            neighbor.path = node.path + [node]
+                                            newQueue.insert(0, neighbor)
+        priorityQueue.minHeap()
         return(priorityQueue)
+
+    def dijkstras(self, priorityQueue):
+
+        #Check if the bounds are valid
+        if (self.start == None) or (self.end == None) or (self.end == self.start):
+            return([])
+
+        #if it is the first iteration
+        if len(priorityQueue) == 0:
+            priorityQueue.insert(self.start)
+            self.start.cost = 0
+            self.visited.add(self.start.id)
+
+        upper = len(priorityQueue) - 1
+
+        while ( 0 <= upper ):
+
+            item = priorityQueue.remove()
+            upper -= 1
+
+            #Initiate Ending Sequence
+            if item == self.end:
+                self.drawingPath = True
+
+
+                for node in self.end.path:
+                    node.state = -2
+                self.pathlist = self.end.path
+
+                self.reset()
+                return([])
+
+            for adjacent in item.adj:
+                if ( adjacent != 0 ):
+                    if ( adjacent.active ):
+                        if ( adjacent.id not in self.visited ):
+
+                            #update the path list for the adjacent nodes
+                            adjacent.path = item.path + [item]
+
+                            adjacent.cost = item.cost + 1
+
+                            if adjacent.state == -1:
+                                adjacent.state = STATE_UPPER
+                                adjacent.touched = True
+
+                            priorityQueue.insert(adjacent)
+
+                            self.visited.add(adjacent.id)
+        return(priorityQueue)
+
+    def greedyBFSSetup(self):
+
+        endX = self.end.col
+        endY = self.end.row
+
+        for node in self.nodes:
+            node.cost = int(calcDist(endX, endY, node.col, node.row) * 10)
 
 
 class Node(pygame.sprite.Sprite):
@@ -416,10 +500,14 @@ class Node(pygame.sprite.Sprite):
         #is the node a wall
         self.active = True
 
-        #list of adjacent nodes
-        self.adj = [None, None, None,
-                    None,    0, None,
-                    None, None, None]
+        #list of adjacent nodes avaliable
+        #[None, None, None,
+        # None,    0, None,
+        # None, None, None]
+        self.adj = self.generateAdjacency(ONLY_ADJCENT)
+
+        #list of all real adjacent nodes
+        self.realAdj = self.generateAdjacency(False)
 
         #Unique Id for the Node
         self.id = uuid.uuid1()
@@ -436,7 +524,7 @@ class Node(pygame.sprite.Sprite):
         #the path to get to this node
         self.path = []
 
-        self.cost = None
+        self.cost = sys.maxsize
         self.g = None
         self.h = None
 
@@ -446,11 +534,15 @@ class Node(pygame.sprite.Sprite):
         for constraint in self.checkEdges():
             self.adj[constraint] = 0
 
+
     def clicked(self, thick = None, past = None):
 
-
         if thick == 1:
-            for node in [adj for adj in self.adj if (adj != 0) and (adj not in past)]:
+            for node in [adj for adj in self.realAdj[5:] if (adj != 0) and (adj not in past)]:
+                past.add(node)
+                node.clicked()
+        elif thick == 2:
+            for node in [adj for adj in self.realAdj if (adj != 0) and (adj not in past)]:
                 past.add(node)
                 node.clicked()
 
@@ -461,7 +553,7 @@ class Node(pygame.sprite.Sprite):
         self.active = not self.active
         self.touched = True
 
-    def checkEdges(self):
+    def checkEdges(self, constraint = None):
 
         constraints = set()
 
@@ -486,7 +578,7 @@ class Node(pygame.sprite.Sprite):
             constraints.add(1)
             constraints.add(2)
 
-        if ONLY_ADJCENT:
+        if constraint:
             constraints.add(0)
             constraints.add(2)
             constraints.add(6)
@@ -494,10 +586,20 @@ class Node(pygame.sprite.Sprite):
 
         return(constraints)
 
+    def generateAdjacency(self,adjacent):
+
+        start = [None, None, None,
+                 None,    0, None,
+                 None, None, None]
+
+        for limit in self.checkEdges(constraint = adjacent):
+            start[limit] = 0
+
+        return(start)
+
     def updateState(self):
         self.state -= 1
         self.surf.fill(self.stateColors[self.state])
-
 
 class MinHeap(object):
 
@@ -584,8 +686,8 @@ class MinHeap(object):
 
     def resize(self):
         for i in range(self.maxsize + 1):
-            self.Heap.append(0)
-        self.maxsize += self.maxsize + 1
+            self.Heap.append(-1)
+            self.maxsize += 1
 
     def heap_disp(self):
 
@@ -627,7 +729,7 @@ class MinHeap(object):
 
         popped = self.Heap[self.FRONT]
         self.Heap[self.FRONT] = self.Heap[self.size]
-        self.Heap[self.size] = 0
+        self.Heap[self.size] = -1
         self.size -= 1
         self.minHeapify(self.FRONT)
 
