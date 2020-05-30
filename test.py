@@ -82,7 +82,6 @@ class Map(object):
             node.active = True
             node.surf.fill(WHITE)
             node.path = []
-            node.touched = True
             node.state = -1
             self.state = "inactive"
             self.drawingPath = False
@@ -94,7 +93,6 @@ class Map(object):
         for curNode in self.nodes:
             if curNode.touched:
                 rectList.append(screen.blit(curNode.surf, curNode.rect))
-                curNode.touched = False
 
 
         #Create Grid
@@ -120,7 +118,6 @@ class Map(object):
             self.start.surf.fill(WHITE)
             self.start.active = True
             self.start.state = -1
-            self.start.touched = True
         self.start = sprite
         self.start.surf.fill(START_COLOR)
         self.start.state = -2
@@ -131,7 +128,6 @@ class Map(object):
             self.end.surf.fill(WHITE)
             self.end.active = True
             self.end.state = -1
-            self.end.touched = True
         self.end = sprite
         self.end.surf.fill(END_COLOR)
         self.end.state = -2
@@ -354,17 +350,17 @@ class Map(object):
             node.h = calcDist(endX, endY, node.col, node.row)
             node.cost = int((node.g + node.h) * 10)
 
-    def aStar(self, priorityQueue):
+    def aStar(self, queue):
 
         if (self.start == None) or (self.end == None) or (self.end == self.start):
             self.reset()
             return([])
 
-        if priorityQueue.size == 0:
-            priorityQueue.insert(self.start)
+        if len(queue) == 0:
+            queue = [self.start]
             self.visited.add(self.start.id)
 
-        item = priorityQueue.remove()
+        item = queue.pop()
 
         if item == self.end:
 
@@ -390,11 +386,33 @@ class Map(object):
                     #update the path list for the adjacent nodes
                     adjacent.path = item.path + [item]
 
-                    priorityQueue.insert(adjacent)
+
+                    inserted = False
+
+                    for queueIndex in range(len(queue)):
+                        queueNode = queue[queueIndex]
+                        if (queueNode.cost == adjacent.cost) and (queueNode.h < adjacent.h):
+                            queue.insert(queueIndex + 1, adjacent)
+                            inserted = True
+                            break
+                        elif (queueNode.cost < adjacent.cost):
+                            queue.insert(queueIndex, adjacent)
+                            inserted = True
+                            break
+
+                    if not inserted:
+                        queue.insert(len(queue),adjacent)
 
                 self.visited.add(adjacent.id)
 
-        return(priorityQueue)
+
+
+
+
+        return(queue)
+
+
+
 
 
 class Node(pygame.sprite.Sprite):
@@ -446,13 +464,7 @@ class Node(pygame.sprite.Sprite):
         for constraint in self.checkEdges():
             self.adj[constraint] = 0
 
-    def clicked(self, thick = None, past = None):
-
-
-        if thick == 1:
-            for node in [adj for adj in self.adj if (adj != 0) and (adj not in past)]:
-                past.add(node)
-                node.clicked()
+    def clicked(self):
 
         if self.active:
             self.surf.fill(BLACK)
@@ -501,36 +513,22 @@ class Node(pygame.sprite.Sprite):
 
 class MinHeap(object):
 
-    def __init__(self, func = None, tie = None):
+    def __init__(self, attributeFunc):
 
-        #Initial MaxSize of heap
+        self.attFunc = self.setAttFunc(attributeFunc)
+
         self.maxsize = 15
 
-        #Create the heap array
-        self.Heap = [-1]*(self.maxsize + 1)
-
-        #Set unused first value
-        self.Heap[0] = - 1
+        self.Heap = [0]*(15 + 1)
+        self.Heap[0] = 0
 
         self.FRONT = 1
         self.size = 0
 
-
-        #set tiebreaker and attribute functions
-        if tie != None:
-            self.tie = self.setAttFunc(tie)
-        else:
-            self.tie = None
-
-        if func != None:
-            self.attFunc = self.setAttFunc(func)
-        else:
-            self.attFunc = lambda a : a
-
     def setAttFunc(self, attributeFunc):
         def newFunc(node):
-            if (node == -1) or (node == 0):
-                return(-1)
+            if (node == 0):
+                return(0)
             else:
                 return(attributeFunc(node))
         return(newFunc)
@@ -556,12 +554,9 @@ class MinHeap(object):
     def minHeapify(self, pos):
 
         if not self.isLeaf(pos):
+            if (self.attFunc(self.Heap[pos]) > self.attFunc(self.Heap[self.leftChild(pos)])) or (self.attFunc(self.Heap[pos]) > self.attFunc(self.Heap[self.rightChild(pos)])):
 
-            if (self.isGreaterThan( pos, self.leftChild(pos) )) or (self.isGreaterThan( pos, self.rightChild(pos) )):
-            #if (self.attFunc(self.Heap[pos]) > self.attFunc(self.Heap[self.leftChild(pos)])) or (self.attFunc(self.Heap[pos]) > self.attFunc(self.Heap[self.rightChild(pos)])):
-
-                #if (self.attFunc(self.Heap[self.leftChild(pos)]) < self.attFunc(self.Heap[self.rightChild(pos)])):
-                if ( self.isGreaterThan( self.rightChild(pos) , self.leftChild(pos) ) ):
+                if (self.attFunc(self.Heap[self.leftChild(pos)]) < self.attFunc(self.Heap[self.rightChild(pos)])):
                     self.swap(pos, self.leftChild(pos))
                     self.minHeapify(self.leftChild(pos))
                 else:
@@ -577,7 +572,7 @@ class MinHeap(object):
 
         current = self.size
 
-        while (self.isGreaterThan(self.parent(current), current)):
+        while (self.attFunc(self.Heap[current]) < self.attFunc(self.Heap[self.parent(current)])):
 
             self.swap(current, self.parent(current))
             current = self.parent(current)
@@ -633,25 +628,34 @@ class MinHeap(object):
 
         return(popped)
 
-    def isGreaterThan(self, first, second):
-        """ Compares two positions within the heap based
-            on the attribute function and the tiebreaker
-            function
-        """
-        firstVal = self.attFunc(self.Heap[first])
-        secondVal = self.attFunc(self.Heap[second])
+class NodeTest(object):
 
-        if firstVal == secondVal:
-            if self.tie != None:
-                firstTie = self.tie(self.Heap[first])
-                secondTie = self.tie(self.Heap[second])
-                if firstTie > secondTie:
-                    return(True)
-                return(False)
-        else:
-            if firstVal > secondVal:
-                return(True)
-            return(False)
+    def __init__(self,value):
 
-    def __len__(self):
-        return(self.size)
+        self.val = value
+
+
+if __name__ == "__main__":
+
+    func = lambda a : a.val
+
+    minHeap = MinHeap(func)
+
+    values = []
+    for i in range(20):
+        num = random.randint(1,200)
+        print("Inserting:", num)
+        minHeap.heap_disp()
+        values.append(num)
+        minHeap.insert(NodeTest(num))
+
+    minHeap.minHeap()
+    minHeap.heap_disp()
+
+    for i in range(10):
+        print("Deleting:", minHeap.remove().val)
+        minHeap.heap_disp()
+        print()
+
+    #print("The Min val is " + str(minHeap.remove().val))
+    #print(values)

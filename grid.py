@@ -17,6 +17,7 @@ map = Map()
 
 running = True
 drag = False
+thickness = 0
 
 currentAlgo = None
 
@@ -28,7 +29,9 @@ screen.fill((255, 255, 255))
 for i in range(ROOT_NUM_BOXES):
     pygame.draw.line(screen, (0,0,0), (i*boxWidth, 0), (i*boxWidth, SCREEN_HEIGHT), 1)
     pygame.draw.line(screen, (0,0,0), (0, i*boxHeight), (SCREEN_WIDTH, i*boxHeight), 1)
-    
+
+pygame.display.flip()
+
 # Main loop
 while running:
 
@@ -64,12 +67,19 @@ while running:
                 currentAlgo = "A*"
                 map.state = "active"
                 map.aStarSetup()
-                queue = []
 
+                aFunc = lambda a : a.cost
+                aTie = lambda a : a.h
+                priorityQueue = MinHeap(func = aFunc, tie = aTie)
 
             elif event.key == K_r:
                 map.setRandomPattern()
 
+            elif event.key == K_b:
+                if thickness == 1:
+                    thickness = 0
+                else:
+                    thickness += 1
 
         elif event.type == QUIT:
             running = False
@@ -79,13 +89,13 @@ while running:
             if (event.button == 1):
 
                 drag = True
-                pastNodes = []
+                pastNodes = set()
 
                 clicked_sprites = getMouseNode(map.nodes)
 
                 for sprite in clicked_sprites:
-                    sprite.clicked()
-                    pastNodes.append(sprite)
+                    sprite.clicked(thick = thickness, past = pastNodes)
+                    pastNodes.add(sprite)
 
             elif (event.button == 3):
                 for sprite in getMouseNode(map.nodes):
@@ -107,8 +117,8 @@ while running:
                  clicked_sprites = [sprite for sprite in getMouseNode(map.nodes) if sprite not in pastNodes]
 
                  for sprite in clicked_sprites:
-                     sprite.clicked()
-                     pastNodes.append(sprite)
+                     sprite.clicked(thick = thickness, past = pastNodes)
+                     pastNodes.add(sprite)
 
     if ( currentAlgo == "bfs" ):
 
@@ -149,7 +159,7 @@ while running:
 
     elif (currentAlgo == "A*"):
         if map.state == "active":
-            queue = map.aStar(queue)
+            priorityQueue = map.aStar(priorityQueue)
             map.updateStates()
 
         elif (map.state == "inactive") and (not map.drawingPath):

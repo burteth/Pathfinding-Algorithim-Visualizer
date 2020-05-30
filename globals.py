@@ -14,6 +14,7 @@ from pygame.locals import (
     K_2,
     K_3,
     K_4,
+    K_b,
     K_r,
     K_j,
     K_h,
@@ -39,7 +40,7 @@ med = 120
 large = 160
 
 
-ROOT_NUM_BOXES = med
+ROOT_NUM_BOXES = large
 BORDER = 0
 
 boxWidth = SCREEN_WIDTH / ROOT_NUM_BOXES
@@ -47,6 +48,6 @@ boxHeight = SCREEN_HEIGHT / ROOT_NUM_BOXES
 
 boxHyp = int(math.sqrt(SCREEN_WIDTH**2 + SCREEN_HEIGHT**2))
 
-STATE_UPPER = 100
+STATE_UPPER = 10
 
-ONLY_ADJCENT = True
+ONLY_ADJCENT = False
