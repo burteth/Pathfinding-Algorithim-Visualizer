@@ -534,7 +534,6 @@ class Node(pygame.sprite.Sprite):
         for constraint in self.checkEdges():
             self.adj[constraint] = 0
 
-
     def clicked(self, thick = None, past = None):
 
         if thick == 1:

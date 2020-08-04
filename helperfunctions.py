@@ -8,7 +8,7 @@ def getMouseNode(nodes):
 
     pos = pygame.mouse.get_pos()
 
-    clicked_sprites = [s for s in nodes if s.rect.collidepoint(pos)]
+    clicked_sprites = [s for s in nodes if s.rect.collidepoint(pygame.mouse.get_pos())]
 
     return(clicked_sprites)
 
