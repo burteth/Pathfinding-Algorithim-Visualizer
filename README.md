@@ -4,7 +4,7 @@
 This is a pathfinding visualization tool build in python using pygame. The black squares are all obstacles that cannot be visited. The green square is the ending point and the pink square is the starting point. The start node, end node, and all obstacles input by the user.
 
 
-### **Algorithims Used**
+### **Algorithms Used**
 
 - **Breath First Search**:  guarentees shortest path
     <p align="center">
