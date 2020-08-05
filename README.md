@@ -1,4 +1,4 @@
-<h1 align="center">Pathfinding Algorithim Visualizer</h1>
+<h1 align="center">Pathfinding Algorithm Visualizer</h1>
 
 ## Description
 This is a pathfinding visualization tool build in python using pygame. The black squares are all obstacles that cannot be visited. The green square is the ending point and the pink square is the starting point. The start node, end node, and all obstacles input by the user.
